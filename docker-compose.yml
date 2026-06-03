@@ -18,7 +18,7 @@ services:
     
     # Persistent storage
     volumes:
-      - /mnt/orbis/containers/briar-bot/cache:/app/cache:rw
+      - ./cache:/app/cache:rw
       - ./logs:/app/logs:rw
       - /etc/localtime:/etc/localtime:ro
     
