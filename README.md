@@ -89,8 +89,7 @@ The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and 
 | Variable | Requirement | Description | Default |
 | -------- | ----------- | ----------- | ------- |
 | `BOT_TOKEN` | Required | Discord bot token from the Discord Developer Portal | - |
-| `GUILD_WAR_ANNOUNCEMENT_CHANNELS` | Optional | Comma-separated Discord channel IDs for guild war reminders | - |
-| `GUILD_WAR_ANNOUNCEMENTS_ENABLED` | Optional | Enables scheduled guild war reminders | `true` |
+| `GUILD_WAR_ANNOUNCEMENT_CHANNELS` | Optional | Comma-separated Discord channel IDs for guild war reminders. Empty disables reminders. | - |
 | `CACHE_TTL_DAYS` | Optional | Number of days to keep cached data | `30` |
 | `CACHE_MAX_SIZE` | Optional | Maximum cache entries | `500` |
 | `RATE_LIMIT_MAX_RETRIES` | Optional | Maximum retry attempts for rate-limited requests | `12` |

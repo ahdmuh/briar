@@ -64,12 +64,6 @@ function getAnnouncementChannels()
     return channelIds.map(id => id.trim()).filter(id => id);
 }
 
-// Check if feature is enabled
-function isEnabled()
-{
-    return process.env.GUILD_WAR_ANNOUNCEMENTS_ENABLED !== 'false';
-}
-
 // Post announcement to all configured channels
 async function postAnnouncement(client, message)
 {
@@ -142,12 +136,6 @@ async function testAnnouncements(client, type = 'both', testChannel = null)
 // Initialize guild war scheduler
 function initializeGuildWarScheduler(client)
 {
-    if (!isEnabled())
-    {
-        console.log('[Guild War] Announcements disabled via GUILD_WAR_ANNOUNCEMENTS_ENABLED');
-        return;
-    }
-
     const channels = getAnnouncementChannels();
     if (channels.length === 0)
     {
