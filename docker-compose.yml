@@ -8,7 +8,7 @@ services:
     # Environment
     environment:
       - NODE_ENV=production
-      - TZ=${TIMEZONE:-UTC}
+      - TZ=UTC
     
     # Load environment variables from .env file
     env_file:

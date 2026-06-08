@@ -7,6 +7,7 @@
 Look up popular builds, gear sets, artifacts, and benchmark stats directly from Discord.
 
 [![Docker](https://img.shields.io/badge/ghcr.io-2496ED?logo=docker&logoColor=white)](Dockerfile)
+[![License](https://img.shields.io/badge/license-GPL--3.0-F47C3C)](LICENSE)
 
 <img width="200" alt="Briar Bot icon" src="assets/briar-bot.png" />
 
@@ -83,8 +84,6 @@ The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and 
 | Variable | Requirement | Description | Default |
 | -------- | ----------- | ----------- | ------- |
 | `BOT_TOKEN` | Required | Discord bot token from the Discord Developer Portal | - |
-| `TIMEZONE` | Optional | Time zone used by the container | `UTC` |
-| `NODE_ENV` | Optional | Node runtime environment | `production` |
 | `GUILD_WAR_ANNOUNCEMENT_CHANNELS` | Optional | Comma-separated Discord channel IDs for guild war reminders | - |
 | `GUILD_WAR_ANNOUNCEMENTS_ENABLED` | Optional | Enables scheduled guild war reminders | `true` |
 | `CACHE_TTL_DAYS` | Optional | Number of days to keep cached data | `30` |
