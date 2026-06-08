@@ -74,7 +74,7 @@ docker compose up -d
 To install the optional automatic updater on a server:
 
 ```bash
-bash scripts/install-server-auto-update-cron.sh 5
+bash scripts/install-updater.sh 5
 ```
 
 The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and recreates the bot when a new image is available.
