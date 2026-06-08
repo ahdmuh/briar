@@ -9,8 +9,7 @@
 		"test": "node tests/automated-test-suite.js",
 		"test:character-data": "node tests/character-data-test.js",
 		"test:interactive": "node tests/interactive-test-runner.js",
-		"test:auto": "node tests/automated-test-suite.js",
-		"build": "npm run install-chrome"
+		"test:auto": "node tests/automated-test-suite.js"
 	},
 	"dependencies": {
 		"axios": "^1.6.0",
@@ -18,8 +17,7 @@
 		"dotenv": "^16.3.1",
 		"node-cron": "^4.2.1",
 		"node-fetch": "^2.6.7",
-		"pm2": "^6.0.8",
-		"puppeteer": "^24.16.2"
+		"puppeteer-core": "^24.16.2"
 	},
 	"devDependencies": {
 		"nodemon": "^3.0.2"

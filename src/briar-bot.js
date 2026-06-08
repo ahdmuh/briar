@@ -1848,7 +1848,7 @@ async function generateHTML(data) {
 async function generateReportImage(data) {
 	const html = await generateHTML(data);
 
-	const puppeteer = require('puppeteer');
+	const puppeteer = require('puppeteer-core');
 	let browser;
 	let page;
 
