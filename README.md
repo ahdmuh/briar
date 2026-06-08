@@ -75,6 +75,8 @@ To install the optional automatic updater on a server:
 bash scripts/install-updater.sh 5
 ```
 
+The `5` is the update check interval in minutes.
+
 The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and recreates the bot when a new image is available.
 
 ### Workflows
