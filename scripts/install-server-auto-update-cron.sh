@@ -5,7 +5,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INTERVAL_MINUTES="${1:-5}"
 LOG_FILE="$REPO_ROOT/logs/auto-update.log"
-SCRIPT_PATH="$REPO_ROOT/scripts/server-auto-update.sh"
+SCRIPT_PATH="$REPO_ROOT/scripts/update-briar-bot.sh"
 
 if ! [[ "$INTERVAL_MINUTES" =~ ^[0-9]+$ ]] || [ "$INTERVAL_MINUTES" -lt 1 ] || [ "$INTERVAL_MINUTES" -gt 59 ]; then
 	echo "Usage: $0 [interval-minutes]"
@@ -25,7 +25,7 @@ else
 	printf '%s\n' "$CRON_JOB" | crontab -
 fi
 
-echo "Installed Briar Bot auto-update cron job:"
+echo "Installed Briar Bot update cron job:"
 echo "$CRON_JOB"
 echo ""
 echo "Logs will be written to $LOG_FILE"
