@@ -21,12 +21,6 @@ Briar Bot is a Discord bot for Epic Seven build lookups. It turns character name
 
 It is intended for private Discord servers, guild communities, and home-server deployments that want quick Epic Seven build references without leaving chat.
 
-## Screenshots
-
-<p><strong>Build Lookup</strong></p>
-
-<img width="250" alt="Briar Bot character build response" src="example.png" />
-
 ## Features
 
 - Look up Epic Seven character build data from Discord
@@ -35,6 +29,12 @@ It is intended for private Discord servers, guild communities, and home-server d
 - Support aliases and shorthand character names
 - Send optional guild war attack and defense reminders
 - Publish container images to GitHub Container Registry
+
+## Screenshots
+
+<p><strong>Build Lookup</strong></p>
+
+<img width="250" alt="Briar Bot character build response" src="example.png" />
 
 ## Usage
 
