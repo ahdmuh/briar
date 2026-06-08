@@ -36,7 +36,7 @@ It is intended for private Discord servers, guild communities, and home-server d
 - Send optional guild war attack and defense reminders
 - Publish container images to GitHub Container Registry
 
-## Commands
+## Usage
 
 Character lookups:
 
@@ -79,6 +79,11 @@ bash scripts/install-updater.sh 5
 
 The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and recreates the bot when a new image is available.
 
+### Workflows
+
+- **Manage Character Data** adds or updates a character name plus optional aliases like `spoli` or `sea politis`, validates the data, and commits the change back to the selected branch.
+- **Publish Container** validates character data, builds the Docker image, and publishes fresh `latest` and SHA-tagged images to GHCR on pushes to `main` or manual runs.
+
 ### Configuration
 
 | Variable | Requirement | Description | Default |
@@ -90,10 +95,6 @@ The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and 
 | `CACHE_MAX_SIZE` | Optional | Maximum cache entries | `500` |
 | `RATE_LIMIT_MAX_RETRIES` | Optional | Maximum retry attempts for rate-limited requests | `12` |
 | `MAX_MEMORY_RESTART` | Optional | Memory threshold used by runtime cleanup logic | `1024M` |
-
-## Character Data
-
-Character names and aliases live in `assets/data/`. The **Manage Character Data** GitHub Action can add or update characters, validate the search layer, commit the result, and publish a fresh GHCR image when targeting `main`.
 
 ## Development
 
