@@ -60,6 +60,7 @@ RUN mkdir -p /app/cache/heroes && \
 
 # Copy dependencies from builder stage
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/services/bot/node_modules ./services/bot/node_modules
 
 # Copy entrypoint script
 COPY .docker/entrypoint.sh /usr/local/bin/entrypoint.sh
