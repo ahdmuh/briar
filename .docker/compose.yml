@@ -1,6 +1,8 @@
+name: briar-bot
+
 services:
   briar-bot:
-    image: ghcr.io/mahmedmo/briar-bot:latest
+    image: ghcr.io/ahdmuh/briar-bot:latest
     container_name: briar-bot
     restart: unless-stopped
     network_mode: bridge
@@ -12,12 +14,12 @@ services:
     
     # Load environment variables from .env file
     env_file:
-      - .env
+      - ../.env
     
     # Persistent storage
     volumes:
-      - ./cache:/app/cache:rw
-      - ./logs:/app/logs:rw
+      - ../cache:/app/cache:rw
+      - ../logs:/app/logs:rw
       - /etc/localtime:/etc/localtime:ro
     
     # Resource limits

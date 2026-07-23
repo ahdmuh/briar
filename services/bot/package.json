@@ -1,0 +1,37 @@
+{
+	"name": "@briarbot/bot",
+	"version": "1.0.0",
+	"description": "Epic Seven Discord bot for build recommendations",
+	"private": true,
+	"main": "src/briar-bot.js",
+	"scripts": {
+		"start": "node src/briar-bot.js",
+		"dev": "nodemon src/briar-bot.js",
+		"test": "node tests/automated-test-suite.js",
+		"test:character-data": "node tests/character-data-test.js",
+		"test:interactive": "node tests/interactive-test-runner.js",
+		"test:auto": "node tests/automated-test-suite.js"
+	},
+	"dependencies": {
+		"axios": "^1.6.0",
+		"discord.js": "^14.14.1",
+		"dotenv": "^16.3.1",
+		"node-cron": "^4.2.1",
+		"node-fetch": "^2.6.7",
+		"puppeteer-core": "^24.16.2"
+	},
+	"devDependencies": {
+		"nodemon": "^3.0.2"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"keywords": [
+		"discord",
+		"bot",
+		"epic-seven",
+		"e7"
+	],
+	"author": "mahmedmo",
+	"license": "GPL-3.0-only"
+}

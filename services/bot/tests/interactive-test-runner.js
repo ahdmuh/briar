@@ -41,7 +41,7 @@ class TestRunner {
         });
         
         this.cacheManager = new CacheManager({
-            cacheDir: path.join(__dirname, '..', 'cache'),
+            cacheDir: path.join(__dirname, '..', '..', '..', 'cache'),
             ttl: 30 * 24 * 60 * 60 * 1000,
             maxCacheSize: 500
         });

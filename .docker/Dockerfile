@@ -3,12 +3,13 @@
 # ================================
 # Stage 1: Dependencies Builder
 # ================================
-FROM node:18-alpine AS dependencies
+FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy workspace manifests
+COPY package.json package-lock.json ./
+COPY services/bot/package.json ./services/bot/package.json
 
 # Install production dependencies
 RUN npm ci --omit=dev && npm cache clean --force
@@ -16,7 +17,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 # ================================
 # Stage 2: Runtime
 # ================================
-FROM node:18-alpine AS runtime
+FROM node:20-alpine AS runtime
 
 # Set labels for metadata
 LABEL maintainer="Briar Bot" \
@@ -24,8 +25,8 @@ LABEL maintainer="Briar Bot" \
       version="2.0" \
       org.opencontainers.image.title="Briar Bot" \
       org.opencontainers.image.description="Epic Seven Discord bot for character build data" \
-      org.opencontainers.image.url="https://github.com/mahmedmo/briar-bot" \
-      org.opencontainers.image.vendor="mahmedmo"
+      org.opencontainers.image.url="https://github.com/ahdmuh/briar-bot" \
+      org.opencontainers.image.vendor="ahdmuh"
 
 # Install runtime dependencies
 RUN apk add --no-cache \
@@ -63,14 +64,16 @@ RUN mkdir -p /app/cache/heroes && \
 COPY --from=dependencies /app/node_modules ./node_modules
 
 # Copy entrypoint script
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY .docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Copy application files
-COPY --chown=briar-bot:briar-bot src/ ./src/
-COPY --chown=briar-bot:briar-bot assets/ ./assets/
-COPY --chown=briar-bot:briar-bot data/ ./data/
-COPY --chown=briar-bot:briar-bot package*.json ./
+COPY --chown=briar-bot:briar-bot services/bot/src/ ./services/bot/src/
+COPY --chown=briar-bot:briar-bot services/bot/assets/ ./services/bot/assets/
+COPY --chown=briar-bot:briar-bot services/bot/data/ ./services/bot/data/
+COPY --chown=briar-bot:briar-bot assets/briar-bot.png ./assets/briar-bot.png
+COPY --chown=briar-bot:briar-bot package.json package-lock.json ./
+COPY --chown=briar-bot:briar-bot services/bot/package.json ./services/bot/package.json
 
 # Create volume mount points
 VOLUME ["/app/cache"]
@@ -86,4 +89,4 @@ EXPOSE 3000
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/entrypoint.sh"]
 
 # Default command - run directly with node
-CMD ["node", "src/briar-bot.js"]
+CMD ["node", "services/bot/src/briar-bot.js"]

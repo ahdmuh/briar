@@ -6,7 +6,7 @@
 
 Look up popular builds, gear sets, artifacts, and benchmark stats directly from Discord.
 
-[![Docker](https://img.shields.io/badge/ghcr.io-2496ED?logo=docker&logoColor=white)](Dockerfile)
+[![Docker](https://img.shields.io/badge/ghcr.io-2496ED?logo=docker&logoColor=white)](.docker/Dockerfile)
 [![License](https://img.shields.io/badge/license-GPL--3.0-F47C3C)](LICENSE)
 
 <img width="200" alt="Briar Bot icon" src="assets/briar-bot.png" />
@@ -59,14 +59,14 @@ Briar Bot runs as a single Docker Compose service and stores runtime cache and l
 The published container image is available from GitHub Container Registry:
 
 ```bash
-docker pull ghcr.io/mahmedmo/briar-bot:latest
+docker pull ghcr.io/ahdmuh/briar-bot:latest
 ```
 
-For Docker Compose deployments, copy `.env.template` to `.env`, fill in the required Discord token, then start the bot:
+For Docker Compose deployments, copy `.env.example` to `.env`, fill in the required Discord token, then start the bot:
 
 ```bash
-docker compose pull
-docker compose up -d
+docker compose -f .docker/compose.yml pull
+docker compose -f .docker/compose.yml up -d --remove-orphans
 ```
 
 To install the optional automatic updater on a server:
@@ -78,6 +78,25 @@ bash scripts/install-updater.sh 5
 The `5` is the update check interval in minutes.
 
 The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and recreates the bot when a new image is available.
+
+## Repository layout
+
+```text
+briarbot/
+├── .docker/              # Dockerfile, Compose, and container entrypoint
+├── .github/workflows/    # Publishing and character-data automation
+├── assets/               # Shared brand and documentation artwork
+├── scripts/              # Deployment and data-management automation
+├── services/
+│   └── bot/
+│       ├── assets/       # Runtime icons owned by the bot
+│       ├── data/         # Character names and aliases
+│       ├── src/
+│       └── tests/
+├── .env.example
+├── package.json          # Workspace-level commands
+└── package-lock.json
+```
 
 ### Workflows
 
@@ -97,10 +116,12 @@ The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and 
 
 ## Development
 
+Requirements: Node.js 20 or newer and npm.
+
 For local development:
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 

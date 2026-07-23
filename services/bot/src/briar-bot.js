@@ -153,7 +153,7 @@ let artifactData = {};
 let artifactsById = {};
 
 const cacheManager = new CacheManager({
-	cacheDir: path.join(__dirname, '..', 'cache'),
+	cacheDir: path.join(__dirname, '..', '..', '..', 'cache'),
 	ttl: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
 	maxCacheSize: 500
 });
@@ -1426,7 +1426,7 @@ async function generateHTML(data) {
 	}
 
 	// Convert Briar Bot watermark to base64
-	const watermarkPath = path.join(__dirname, '..', 'assets', 'briar-bot.png');
+	const watermarkPath = path.join(__dirname, '..', '..', '..', 'assets', 'briar-bot.png');
 	let watermarkDataUrl = '';
 	if (fs.existsSync(watermarkPath)) {
 		const watermarkBuffer = fs.readFileSync(watermarkPath);

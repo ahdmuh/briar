@@ -1,36 +1,18 @@
 {
-	"name": "briar-bot",
+	"name": "briarbot",
 	"version": "1.0.0",
-	"description": "Epic Seven discord bot for optimal build reccomendations.",
-	"main": "briar-bot.js",
-	"scripts": {
-		"start": "node src/briar-bot.js",
-		"dev": "nodemon src/briar-bot.js",
-		"test": "node tests/automated-test-suite.js",
-		"test:character-data": "node tests/character-data-test.js",
-		"test:interactive": "node tests/interactive-test-runner.js",
-		"test:auto": "node tests/automated-test-suite.js"
-	},
-	"dependencies": {
-		"axios": "^1.6.0",
-		"discord.js": "^14.14.1",
-		"dotenv": "^16.3.1",
-		"node-cron": "^4.2.1",
-		"node-fetch": "^2.6.7",
-		"puppeteer-core": "^24.16.2"
-	},
-	"devDependencies": {
-		"nodemon": "^3.0.2"
-	},
-	"engines": {
-		"node": ">=18.0.0"
-	},
-	"keywords": [
-		"discord",
-		"bot",
-		"epic-seven",
-		"e7"
+	"description": "BriarBot repository workspace",
+	"private": true,
+	"workspaces": [
+		"services/*"
 	],
-	"author": "mahmedmo",
+	"scripts": {
+		"start": "npm run start --workspace @briarbot/bot",
+		"dev": "npm run dev --workspace @briarbot/bot",
+		"test": "npm test --workspace @briarbot/bot",
+		"test:character-data": "npm run test:character-data --workspace @briarbot/bot",
+		"test:interactive": "npm run test:interactive --workspace @briarbot/bot",
+		"test:auto": "npm run test:auto --workspace @briarbot/bot"
+	},
 	"license": "GPL-3.0-only"
 }
