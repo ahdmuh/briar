@@ -35,23 +35,22 @@ jobs:
         with:
           ref: ${{ inputs.target_branch }}
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
+          bun-version: 1.3.14
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Update character data
         env:
           CHARACTER_NAME: ${{ inputs.character_name }}
           CHARACTER_ALIASES: ${{ inputs.aliases }}
-        run: node scripts/upsert-character-data.js --character "$CHARACTER_NAME" --aliases "$CHARACTER_ALIASES"
+        run: bun scripts/upsert-character-data.js --character "$CHARACTER_NAME" --aliases "$CHARACTER_ALIASES"
 
       - name: Validate character data
-        run: npm run test:character-data
+        run: bun run test:character-data
 
       - name: Commit changes
         id: commit_changes
@@ -85,17 +84,16 @@ jobs:
         with:
           ref: ${{ needs.update_character_data.outputs.commit_sha }}
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
+          bun-version: 1.3.14
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Validate character data
-        run: npm run test:character-data
+        run: bun run test:character-data
 
       - name: Set image coordinates
         id: image

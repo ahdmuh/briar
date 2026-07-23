@@ -5,12 +5,12 @@
 	"private": true,
 	"main": "src/briar-bot.js",
 	"scripts": {
-		"start": "node src/briar-bot.js",
-		"dev": "nodemon src/briar-bot.js",
-		"test": "node tests/automated-test-suite.js",
-		"test:character-data": "node tests/character-data-test.js",
-		"test:interactive": "node tests/interactive-test-runner.js",
-		"test:auto": "node tests/automated-test-suite.js"
+		"start": "bun src/briar-bot.js",
+		"dev": "bun --watch src/briar-bot.js",
+		"test": "bun tests/automated-test-suite.js",
+		"test:character-data": "bun tests/character-data-test.js",
+		"test:interactive": "bun tests/interactive-test-runner.js",
+		"test:auto": "bun tests/automated-test-suite.js"
 	},
 	"dependencies": {
 		"axios": "^1.6.0",
@@ -20,11 +20,8 @@
 		"node-fetch": "^2.6.7",
 		"puppeteer-core": "^24.16.2"
 	},
-	"devDependencies": {
-		"nodemon": "^3.0.2"
-	},
 	"engines": {
-		"node": ">=20.0.0"
+		"bun": ">=1.3.0"
 	},
 	"keywords": [
 		"discord",

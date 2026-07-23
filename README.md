@@ -95,7 +95,7 @@ briarbot/
 │       └── tests/
 ├── .env.example
 ├── package.json          # Workspace-level commands
-└── package-lock.json
+└── bun.lock
 ```
 
 ### Workflows
@@ -116,26 +116,26 @@ briarbot/
 
 ## Development
 
-Requirements: Node.js 20 or newer and npm.
+Requirement: Bun 1.3.14 or newer.
 
 For local development:
 
 ```bash
-npm ci
-npm run dev
+bun install --frozen-lockfile
+bun run dev
 ```
 
 For production-like local startup:
 
 ```bash
-npm start
+bun start
 ```
 
 Run the test suite:
 
 ```bash
-npm test
-npm run test:character-data
+bun run test
+bun run test:character-data
 ```
 
 ## Transparency

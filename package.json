@@ -3,16 +3,17 @@
 	"version": "1.0.0",
 	"description": "BriarBot repository workspace",
 	"private": true,
+	"packageManager": "bun@1.3.14",
 	"workspaces": [
 		"services/*"
 	],
 	"scripts": {
-		"start": "npm run start --workspace @briarbot/bot",
-		"dev": "npm run dev --workspace @briarbot/bot",
-		"test": "npm test --workspace @briarbot/bot",
-		"test:character-data": "npm run test:character-data --workspace @briarbot/bot",
-		"test:interactive": "npm run test:interactive --workspace @briarbot/bot",
-		"test:auto": "npm run test:auto --workspace @briarbot/bot"
+		"start": "bun services/bot/src/briar-bot.js",
+		"dev": "bun --watch services/bot/src/briar-bot.js",
+		"test": "bun services/bot/tests/automated-test-suite.js",
+		"test:character-data": "bun services/bot/tests/character-data-test.js",
+		"test:interactive": "bun services/bot/tests/interactive-test-runner.js",
+		"test:auto": "bun services/bot/tests/automated-test-suite.js"
 	},
 	"license": "GPL-3.0-only"
 }

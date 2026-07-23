@@ -1940,7 +1940,7 @@ const server = http.createServer((req, res) => {
 
 // Process optimization for VM environment
 process.on('warning', (warning) => {
-	console.warn('Node.js Warning:', warning.name, warning.message);
+	console.warn('Runtime warning:', warning.name, warning.message);
 });
 
 // Memory monitoring (reduced frequency)

@@ -3,21 +3,21 @@
 # ================================
 # Stage 1: Dependencies Builder
 # ================================
-FROM node:20-alpine AS dependencies
+FROM oven/bun:1.3.14-alpine AS dependencies
 
 WORKDIR /app
 
 # Copy workspace manifests
-COPY package.json package-lock.json ./
+COPY package.json bun.lock ./
 COPY services/bot/package.json ./services/bot/package.json
 
 # Install production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+RUN bun install --frozen-lockfile --production
 
 # ================================
 # Stage 2: Runtime
 # ================================
-FROM node:20-alpine AS runtime
+FROM oven/bun:1.3.14-alpine AS runtime
 
 # Set labels for metadata
 LABEL maintainer="Briar Bot" \
@@ -48,10 +48,8 @@ RUN addgroup -g 1001 -S briar-bot && \
 # Set Chromium executable path
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Set Node environment
+# Set runtime environment
 ENV NODE_ENV=production
-ENV NPM_CONFIG_LOGLEVEL=warn
-ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 
 # Create app directory structure
 WORKDIR /app
@@ -72,7 +70,7 @@ COPY --chown=briar-bot:briar-bot services/bot/src/ ./services/bot/src/
 COPY --chown=briar-bot:briar-bot services/bot/assets/ ./services/bot/assets/
 COPY --chown=briar-bot:briar-bot services/bot/data/ ./services/bot/data/
 COPY --chown=briar-bot:briar-bot assets/briar-bot.png ./assets/briar-bot.png
-COPY --chown=briar-bot:briar-bot package.json package-lock.json ./
+COPY --chown=briar-bot:briar-bot package.json bun.lock ./
 COPY --chown=briar-bot:briar-bot services/bot/package.json ./services/bot/package.json
 
 # Create volume mount points
@@ -80,7 +78,7 @@ VOLUME ["/app/cache"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD node -e "console.log('Health check passed')" || exit 1
+    CMD bun -e "console.log('Health check passed')" || exit 1
 
 # Expose port (if needed for health checks)
 EXPOSE 3000
@@ -88,5 +86,5 @@ EXPOSE 3000
 # Use custom entrypoint for permission handling and tini for signal handling
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/entrypoint.sh"]
 
-# Default command - run directly with node
-CMD ["node", "services/bot/src/briar-bot.js"]
+# Default command
+CMD ["bun", "services/bot/src/briar-bot.js"]
