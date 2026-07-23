@@ -11,9 +11,9 @@ const {
     generateReportImage,
     heroData,
     artifactData
-} = require('../src/briar-bot.js');
-const { findBestCharacterMatch, getCharacterSuggestions } = require('../src/character-search.js');
-const CacheManager = require('../src/cache-manager');
+} = require('../src/briar_bot.js');
+const { findBestCharacterMatch, getCharacterSuggestions } = require('../src/character_search.js');
+const CacheManager = require('../src/cache_manager');
 
 // Colors for console output
 const colors = {
@@ -41,7 +41,7 @@ class TestRunner {
         });
         
         this.cacheManager = new CacheManager({
-            cacheDir: path.join(__dirname, '..', '..', '..', 'cache'),
+            cacheDir: path.join(__dirname, '..', 'cache'),
             ttl: 30 * 24 * 60 * 60 * 1000,
             maxCacheSize: 500
         });

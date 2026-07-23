@@ -4,12 +4,12 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const axios = require('axios');
-const getArtifactImage = require('./fetch-artifact');
-const getHeroImageUrl = require('./fetch-hero');
-const { findBestCharacterMatch, getCharacterSuggestions } = require('./character-search');
-const CacheManager = require('./cache-manager');
-const RateLimiter = require('./rate-limiter');
-const { initializeGuildWarScheduler, testAnnouncements } = require('./guild-war-scheduler');
+const getArtifactImage = require('./fetch_artifact');
+const getHeroImageUrl = require('./fetch_hero');
+const { findBestCharacterMatch, getCharacterSuggestions } = require('./character_search');
+const CacheManager = require('./cache_manager');
+const RateLimiter = require('./rate_limiter');
+const { initializeGuildWarScheduler, testAnnouncements } = require('./guild_war_scheduler');
 require('dotenv').config();
 
 
@@ -153,7 +153,7 @@ let artifactData = {};
 let artifactsById = {};
 
 const cacheManager = new CacheManager({
-	cacheDir: path.join(__dirname, '..', '..', '..', 'cache'),
+	cacheDir: path.join(__dirname, '..', 'cache'),
 	ttl: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
 	maxCacheSize: 500
 });
@@ -1078,7 +1078,7 @@ function analyzeArtifactPopularity(builds) {
 		.slice(0, 10);
 }
 
-const ICON_ASSET_DIR = path.join(__dirname, '..', 'assets', 'icons');
+const ICON_ASSET_DIR = path.join(__dirname, '..', 'assets', 'discord');
 const iconAssetPath = (fileName) => path.join(ICON_ASSET_DIR, fileName);
 
 const SET_ASSETS = {
@@ -1426,7 +1426,7 @@ async function generateHTML(data) {
 	}
 
 	// Convert Briar Bot watermark to base64
-	const watermarkPath = path.join(__dirname, '..', '..', '..', 'assets', 'briar-bot.png');
+	const watermarkPath = path.join(__dirname, '..', 'assets', 'shared', 'briar-bot.png');
 	let watermarkDataUrl = '';
 	if (fs.existsSync(watermarkPath)) {
 		const watermarkBuffer = fs.readFileSync(watermarkPath);

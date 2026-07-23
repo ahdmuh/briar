@@ -7,9 +7,8 @@ FROM oven/bun:1.3.14-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy workspace manifests
+# Copy application manifests
 COPY package.json bun.lock ./
-COPY services/bot/package.json ./services/bot/package.json
 
 # Install production dependencies
 RUN bun install --frozen-lockfile --production
@@ -60,19 +59,17 @@ RUN mkdir -p /app/cache/heroes && \
 
 # Copy dependencies from builder stage
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/services/bot/node_modules ./services/bot/node_modules
 
 # Copy entrypoint script
 COPY .docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Copy application files
-COPY --chown=briar-bot:briar-bot services/bot/src/ ./services/bot/src/
-COPY --chown=briar-bot:briar-bot services/bot/assets/ ./services/bot/assets/
-COPY --chown=briar-bot:briar-bot services/bot/data/ ./services/bot/data/
-COPY --chown=briar-bot:briar-bot assets/briar-bot.png ./assets/briar-bot.png
+COPY --chown=briar-bot:briar-bot src/ ./src/
+COPY --chown=briar-bot:briar-bot data/ ./data/
+COPY --chown=briar-bot:briar-bot assets/discord/ ./assets/discord/
+COPY --chown=briar-bot:briar-bot assets/shared/briar-bot.png ./assets/shared/briar-bot.png
 COPY --chown=briar-bot:briar-bot package.json bun.lock ./
-COPY --chown=briar-bot:briar-bot services/bot/package.json ./services/bot/package.json
 
 # Create volume mount points
 VOLUME ["/app/cache"]
@@ -88,4 +85,4 @@ EXPOSE 3000
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/entrypoint.sh"]
 
 # Default command
-CMD ["bun", "services/bot/src/briar-bot.js"]
+CMD ["bun", "src/briar_bot.js"]

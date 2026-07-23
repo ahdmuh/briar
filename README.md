@@ -7,9 +7,9 @@
 Look up popular builds, gear sets, artifacts, and benchmark stats directly from Discord.
 
 [![Docker](https://img.shields.io/badge/ghcr.io-2496ED?logo=docker&logoColor=white)](.docker/Dockerfile)
-[![License](https://img.shields.io/badge/license-GPL--3.0-F47C3C)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--3.0-0B1F3A)](LICENSE)
 
-<img width="200" alt="Briar Bot icon" src="assets/briar-bot.png" />
+<img width="200" alt="Briar Bot icon" src="assets/shared/briar-bot.png" />
 
 </div>
 
@@ -32,7 +32,7 @@ It is intended for private Discord servers, guild communities, and home-server d
 
 <p><strong>Build Lookup</strong></p>
 
-<img width="250" alt="Briar Bot character build response" src="assets/screenshot.png" />
+<img width="250" alt="Briar Bot character build response" src="assets/shared/screenshot.png" />
 
 ## Usage
 
@@ -85,23 +85,21 @@ The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and 
 briarbot/
 ├── .docker/              # Dockerfile, Compose, and container entrypoint
 ├── .github/workflows/    # Publishing and character-data automation
-├── assets/               # Shared brand and documentation artwork
+├── assets/
+│   ├── discord/          # Runtime icons used by the Discord service
+│   └── shared/           # Brand and documentation artwork
+├── data/                 # Tracked character names and aliases
 ├── scripts/              # Deployment and data-management automation
-├── services/
-│   └── bot/
-│       ├── assets/       # Runtime icons owned by the bot
-│       ├── data/         # Character names and aliases
-│       ├── src/
-│       └── tests/
+├── src/                  # Service source and colocated tests
 ├── .env.example
-├── package.json          # Workspace-level commands
+├── package.json
 └── bun.lock
 ```
 
 ### Workflows
 
-- **Manage Character Data** adds or updates a character name plus optional aliases like `spoli` or `sea politis`, validates the data, and commits the change back to the selected branch.
-- **Publish Container** validates character data, builds the Docker image, and publishes fresh `latest` and SHA-tagged images to GHCR on pushes to `main` or manual runs.
+- **Characters · Sync** adds or updates a character name plus optional aliases like `spoli` or `sea politis`, validates the data, and commits the change back to the selected branch.
+- **Briar · Image** validates character data, builds the Docker image, and publishes fresh `latest` and SHA-tagged images to GHCR. Character syncs reuse this workflow instead of duplicating image publication steps.
 
 ### Configuration
 

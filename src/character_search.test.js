@@ -6,7 +6,7 @@ const {
 	findBestCharacterMatch,
 	characterNames,
 	communityAbbreviations
-} = require('../src/character-search.js');
+} = require('./character_search.js');
 
 function expectExactMatch(input, expectedCharacter) {
 	const result = findBestCharacterMatch(input);

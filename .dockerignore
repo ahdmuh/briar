@@ -50,8 +50,8 @@ Dockerfile*
 README.md
 docs/
 
-# Test files (exclude from production image)
-tests/output/
+# Test output (exclude from production image)
+scripts/output/
 
 # Temporary files
 tmp/
