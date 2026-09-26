@@ -69,7 +69,7 @@ Bug fixes, security patches, and other critical improvements are welcome. Larger
 
 ## Transparency
 
-This project was built with help from agentic coding tools, used throughout development to implement features, debug issues, and refine the code.
+AI assisted with implementation, debugging, and refactoring. Human implementation, direction, review, testing, and product decisions guided the project.
 
 ## Credits
 
