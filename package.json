@@ -1,5 +1,5 @@
 {
-	"name": "briar-bot",
+	"name": "briar",
 	"version": "1.0.0",
 	"description": "Epic Seven Discord bot for build recommendations",
 	"private": true,

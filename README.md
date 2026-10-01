@@ -1,6 +1,6 @@
 <div align="center">
 
-# Briar Bot
+# Briar
 
 Look up popular Epic Seven character builds, gear sets, artifacts, and guild war reminders from Discord chat.
 
@@ -32,7 +32,7 @@ Briar Bot is meant to stay a focused Epic Seven utility for Discord communities 
 The usual path is Docker. Pull the published image and run it with Compose:
 
 ```bash
-docker pull ghcr.io/ahdmuh/briar-bot:latest
+docker pull ghcr.io/ahdmuh/briar:latest
 cp .env.template .env
 # Set BOT_TOKEN (and optional guild war channels) in .env
 docker compose -f .docker/compose.yml pull
