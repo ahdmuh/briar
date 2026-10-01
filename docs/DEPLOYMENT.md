@@ -1,6 +1,6 @@
 # Deployment
 
-Briar Bot runs as a single Docker Compose service. Runtime cache and logs live in local bind mounts. The published image is `ghcr.io/ahdmuh/briar-bot`.
+Briar Bot runs as a single Docker Compose service. Runtime cache and logs live in local bind mounts. The published image is `ghcr.io/ahdmuh/briar`.
 
 ## Docker Compose
 
@@ -16,7 +16,7 @@ docker compose -f .docker/compose.yml up -d --remove-orphans
 Compose loads `../.env` relative to `.docker/compose.yml` and mounts `../cache` and `../logs` into the container. Pull the image alone with:
 
 ```bash
-docker pull ghcr.io/ahdmuh/briar-bot:latest
+docker pull ghcr.io/ahdmuh/briar:latest
 ```
 
 To update an existing deployment, pull again and recreate:
@@ -34,7 +34,7 @@ On a server that already uses the Compose layout, install the optional updater:
 bash scripts/install-updater.sh 5
 ```
 
-The `5` is the update check interval in minutes. The updater runs `scripts/update-briar-bot.sh`, pulls the configured image, and recreates the bot when a new image is available.
+The `5` is the update check interval in minutes. The updater runs `scripts/update-briar.sh`, pulls the configured image, and recreates the bot when a new image is available.
 
 ## Configuration
 

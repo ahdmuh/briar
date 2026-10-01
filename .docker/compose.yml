@@ -1,9 +1,9 @@
-name: briar-bot
+name: briar
 
 services:
-  briar-bot:
-    image: ghcr.io/ahdmuh/briar-bot:latest
-    container_name: briar-bot
+  briar:
+    image: ghcr.io/ahdmuh/briar:latest
+    container_name: briar
     restart: unless-stopped
     network_mode: bridge
     
@@ -61,6 +61,6 @@ services:
     
     # Metadata
     labels:
-      - "com.briar-bot.service=discord-bot"
-      - "com.briar-bot.environment=production"
-      - "com.briar-bot.version=2.0"
+      - "com.briar.service=discord-bot"
+      - "com.briar.environment=production"
+      - "com.briar.version=2.0"

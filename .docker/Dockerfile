@@ -24,7 +24,7 @@ LABEL maintainer="Briar Bot" \
       version="2.0" \
       org.opencontainers.image.title="Briar Bot" \
       org.opencontainers.image.description="Epic Seven Discord bot for character build data" \
-      org.opencontainers.image.url="https://github.com/ahdmuh/briar-bot" \
+      org.opencontainers.image.url="https://github.com/ahdmuh/briar" \
       org.opencontainers.image.vendor="ahdmuh"
 
 # Install runtime dependencies
