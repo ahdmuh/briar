@@ -23,7 +23,8 @@ permissions:
 
 jobs:
   sync:
-    runs-on: [self-hosted, furnace]
+    # Pinned to arcesus: giratus's network link tops out near 9 Mbps, which stalls image builds and pushes
+    runs-on: [self-hosted, furnace, arcesus]
     outputs:
       changed: ${{ steps.commit.outputs.changed }}
       commit_sha: ${{ steps.commit.outputs.commit_sha }}
