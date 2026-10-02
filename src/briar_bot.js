@@ -155,7 +155,8 @@ let artifactsById = {};
 const cacheManager = new CacheManager({
 	cacheDir: path.join(__dirname, '..', 'cache'),
 	ttl: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
-	maxCacheSize: 500
+	maxCacheSize: 500,
+	renderVersion: 2 // v2: header keeps the name clear of the watermark
 });
 
 const rateLimiter = new RateLimiter({
@@ -223,7 +224,7 @@ const QUEUE_MAX_SIZE = 20; // Max queue size to prevent memory issues
 let isProcessingQueue = false;
 
 // Request deduplication system
-const ongoingRequests = new Map(); // heroName -> { promise, requesters: [messages] }
+const ongoingRequests = new Map(); // heroName -> { promise, startTime }
 const REQUEST_TIMEOUT = 120000; // 2 minutes timeout for ongoing requests
 
 // Memory and performance tracking
@@ -312,8 +313,9 @@ async function processQueue() {
 }
 
 async function processCommand(commandData) {
-	const { message, userInput, characterName, confidence, searchResult } = commandData;
+	const { message, characterName, confidence, searchResult } = commandData;
 	const userId = message.author.id;
+	let loadingMessage = null;
 
 	processingCommands.add(userId);
 	activeConnections++;
@@ -324,34 +326,26 @@ async function processCommand(commandData) {
 			loadingContent = `🌒   A pale echo at a ${confidence}% match... Revealing **${characterName}**...`;
 		}
 
-		const loadingMessage = await message.reply(loadingContent);
+		loadingMessage = await message.reply(loadingContent).catch((error) => {
+			console.warn(`Could not send loading message for ${characterName}:`, error.message);
+			return null;
+		});
 
-		// Use deduplication system to handle the request
-		const result = await getHeroWithDeduplication(characterName, loadingMessage);
+		const result = await getHeroWithDeduplication(characterName);
 
 		if (result && result.screenshot) {
-			const attachment = new AttachmentBuilder(result.screenshot, {
-				name: `${characterName.replace(/\s+/g, '_')}.png`
-			});
-
-			// Create appropriate message based on cache status
-			let displayMessage = `☾   ${characterName}`;
-
-			await loadingMessage.edit({
-				content: displayMessage,
-				files: [attachment]
-			});
+			await deliverResponse(message, loadingMessage, buildImagePayload(characterName, result.screenshot));
 		} else if (result && result.noData) {
 			// Character exists but no build data available
-			await loadingMessage.edit(result.message);
+			await deliverResponse(message, loadingMessage, result.message);
 		} else {
-			await loadingMessage.edit(`❌ I called for **${characterName}**... no one answered.`);
+			await deliverResponse(message, loadingMessage, `❌ I called for **${characterName}**... no one answered.`);
 		}
 
 	} catch (error) {
-		console.error('Error processing command:', error);
+		console.error(`Error processing command for ${characterName}:`, error);
 		try {
-			await message.reply(`❌ The witch stirs... the search for **${characterName}** is lost.`);
+			await deliverResponse(message, loadingMessage, `❌ The witch stirs... the search for **${characterName}** is lost.`);
 		} catch (replyError) {
 			console.error('Error sending error message:', replyError);
 		}
@@ -366,105 +360,114 @@ async function processCommand(commandData) {
 	}
 }
 
+function buildImagePayload(characterName, screenshot) {
+	// discord.js only accepts a Buffer; puppeteer returns a Uint8Array
+	const attachment = new AttachmentBuilder(Buffer.from(screenshot), {
+		name: `${characterName.replace(/\s+/g, '_')}.png`
+	});
+
+	return {
+		content: `☾   ${characterName}`,
+		files: [attachment]
+	};
+}
+
 /**
- * Handle hero request with deduplication
- * @param {string} heroName 
- * @param {Object} message - Discord message object
- * @returns {Promise<Buffer|null>}
+ * Edit the loading message into the final response, falling back to a fresh reply
+ * if the edit fails (loading message deleted, transient Discord error).
  */
-async function getHeroWithDeduplication(heroName, message) {
-	const normalizedHeroName = heroName.toLowerCase().trim();
-
-	// Check if there's already an ongoing request for this hero
-	if (ongoingRequests.has(normalizedHeroName)) {
-		const existingRequest = ongoingRequests.get(normalizedHeroName);
-		existingRequest.requesters.push(message);
-
+async function deliverResponse(message, loadingMessage, payload) {
+	if (loadingMessage) {
 		try {
-			// Wait for the existing request to complete
-			const result = await existingRequest.promise;
-			return result;
+			return await loadingMessage.edit(payload);
 		} catch (error) {
-			console.error(`❌ Deduplicated request failed for ${heroName}:`, error.message);
-			return null;
+			console.warn('Editing loading message failed, replying instead:', error.message);
+			await loadingMessage.delete().catch(() => {});
 		}
 	}
 
-	let timeoutId;
+	return message.reply(payload);
+}
 
-	const requestPromise = (async () => {
-		// Set up timeout cleanup when processing actually starts
-		timeoutId = setTimeout(() => {
-			if (ongoingRequests.has(normalizedHeroName)) {
-				console.warn(`⏰ Request timeout for ${heroName} after ${REQUEST_TIMEOUT / 1000}s, cleaning up`);
-				ongoingRequests.delete(normalizedHeroName);
-			}
-		}, REQUEST_TIMEOUT);
+/**
+ * Resolve a hero image, sharing one in-flight request between concurrent callers
+ * @param {string} heroName
+ * @returns {Promise<Object>}
+ */
+function getHeroWithDeduplication(heroName) {
+	const normalizedHeroName = heroName.toLowerCase().trim();
+	const existingRequest = ongoingRequests.get(normalizedHeroName);
 
-		try {
-			// Check fresh cache first
-			let screenshot = cacheManager.getCachedHeroImage(heroName);
+	if (existingRequest) {
+		return existingRequest.promise;
+	}
 
-			if (screenshot) {
-				console.log(`✅ Fresh cache hit for ${heroName}`);
-				return { screenshot, fromCache: true, isStale: false };
-			}
-
-			// Generate new image if not cached
-			const heroAnalysis = await analyzeHeroData(heroName);
-
-			// If API failed or was blocked, try stale cache as fallback
-			if (!heroAnalysis) {
-				console.log(`⚠️  API failed for ${heroName}, checking for stale cache...`);
-				const staleCache = cacheManager.getStaleCachedHeroImage(heroName);
-
-				if (staleCache && staleCache.imageBuffer) {
-					const daysOld = Math.floor(staleCache.age / (1000 * 60 * 60 * 24));
-					console.log(`📦 Using stale cache for ${heroName} (${daysOld} days old)`);
-					return {
-						screenshot: staleCache.imageBuffer,
-						fromCache: true,
-						isStale: true,
-						age: staleCache.age,
-						daysOld
-					};
-				}
-
-				console.error(`❌ No data available for ${heroName} (no fresh data, no stale cache)`);
-
-				// Return a special indicator for "character exists but no data"
-				return {
-					noData: true,
-					message: `🕸️   **${heroName}** lingers in the shadows... not enough data has been gathered yet.`
-				};
-			}
-
-			screenshot = await generateReportImage(heroAnalysis);
-
-			// Cache the generated image
-			await cacheManager.cacheHeroImage(heroName, screenshot, heroAnalysis);
-
-			return { screenshot, fromCache: false, isStale: false };
-
-		} finally {
-			// Clean up the ongoing request tracking and clear timeout
+	// Register before any work starts so a synchronous cache hit cannot leak the entry
+	const requestPromise = resolveHeroImage(heroName).finally(() => {
+		if (ongoingRequests.get(normalizedHeroName)?.promise === requestPromise) {
 			ongoingRequests.delete(normalizedHeroName);
-			if (timeoutId) {
-				clearTimeout(timeoutId);
-			}
 		}
-	})();
+	});
 
-	// Store the request 
-	const requestData = {
+	ongoingRequests.set(normalizedHeroName, {
 		promise: requestPromise,
-		requesters: [message],
 		startTime: Date.now()
-	};
-
-	ongoingRequests.set(normalizedHeroName, requestData);
+	});
 
 	return requestPromise;
+}
+
+async function resolveHeroImage(heroName) {
+	const cachedImage = cacheManager.getCachedHeroImage(heroName);
+	if (cachedImage) {
+		console.log(`✅ Fresh cache hit for ${heroName}`);
+		return { screenshot: cachedImage, fromCache: true, isStale: false };
+	}
+
+	const heroAnalysis = await analyzeHeroData(heroName);
+	let renderError = null;
+
+	if (heroAnalysis) {
+		try {
+			const screenshot = await generateReportImage(heroAnalysis);
+
+			// Write in the background; the user does not wait on disk
+			cacheManager.cacheHeroImage(heroName, screenshot, heroAnalysis)
+				.catch((error) => console.error(`Failed to cache ${heroName}:`, error));
+
+			return { screenshot, fromCache: false, isStale: false };
+		} catch (error) {
+			renderError = error;
+			console.error(`❌ Rendering failed for ${heroName}:`, error.message);
+		}
+	} else {
+		console.log(`⚠️  API failed for ${heroName}, checking for stale cache...`);
+	}
+
+	const staleCache = cacheManager.getStaleCachedHeroImage(heroName);
+	if (staleCache && staleCache.imageBuffer) {
+		const daysOld = Math.floor(staleCache.age / (1000 * 60 * 60 * 24));
+		console.log(`📦 Using stale cache for ${heroName} (${daysOld} days old)`);
+		return {
+			screenshot: staleCache.imageBuffer,
+			fromCache: true,
+			isStale: true,
+			age: staleCache.age,
+			daysOld
+		};
+	}
+
+	if (renderError) {
+		throw renderError;
+	}
+
+	console.error(`❌ No data available for ${heroName} (no fresh data, no stale cache)`);
+
+	// Character exists but no build data available
+	return {
+		noData: true,
+		message: `🕸️   **${heroName}** lingers in the shadows... not enough data has been gathered yet.`
+	};
 }
 
 /**
@@ -585,6 +588,10 @@ const REFERRER_DOMAINS = [
 ];
 
 let requestCounter = 0;
+
+// Shared keep-alive agents so builds requests reuse TLS connections
+const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 5, timeout: 25000 });
+const httpsAgent = new (require('https').Agent)({ keepAlive: true, maxSockets: 5, timeout: 25000 });
 
 function getRandomElement(arr) {
 	return arr[Math.floor(Math.random() * arr.length)];
@@ -860,16 +867,8 @@ async function getPopularBuilds(heroName, retryCount = 0) {
 			maxRedirects: 10,
 
 			// Standard connection management
-			httpAgent: new (require('http').Agent)({
-				keepAlive: true,
-				maxSockets: 5,
-				timeout: 25000
-			}),
-			httpsAgent: new (require('https').Agent)({
-				keepAlive: true,
-				maxSockets: 5,
-				timeout: 25000
-			}),
+			httpAgent,
+			httpsAgent,
 
 			// Response handling
 			validateStatus: (status) => status >= 200 && status < 500,
@@ -1116,6 +1115,24 @@ const STAT_ICONS = {
 	gs: iconAssetPath('star.png')
 };
 
+// Assets never change at runtime, so encode them once instead of on every render
+function readPngDataUrl(filePath) {
+	try {
+		return `data:image/png;base64,${fs.readFileSync(filePath).toString('base64')}`;
+	} catch {
+		return '';
+	}
+}
+
+const SET_ICON_DATA_URLS = Object.fromEntries(
+	Object.entries(SET_ASSETS).map(([setCode, assetPath]) => [setCode, readPngDataUrl(assetPath)])
+);
+const STAT_ICON_DATA_URLS = Object.fromEntries(
+	Object.entries(STAT_ICONS).map(([statKey, iconPath]) => [statKey, readPngDataUrl(iconPath)])
+);
+const BROKEN_ICON_DATA_URL = readPngDataUrl(iconAssetPath('setbroken.png'));
+const WATERMARK_DATA_URL = readPngDataUrl(path.join(__dirname, '..', 'assets', 'shared', 'briar-bot.png'));
+
 // Load game data with retry mechanism
 async function loadGameData(retryCount = 0) {
 	const maxRetries = 3;
@@ -1221,12 +1238,8 @@ const FOUR_PIECE_SETS = new Set([
 
 // Function to create a broken set icon using the asset
 function createBrokenIcon() {
-	const brokenPath = iconAssetPath('setbroken.png');
-	if (fs.existsSync(brokenPath)) {
-		const imageBuffer = fs.readFileSync(brokenPath);
-		const imageBase64 = imageBuffer.toString('base64');
-		const dataUrl = `data:image/png;base64,${imageBase64}`;
-		return `<div class="set-combo"><img src="${dataUrl}" class="set-icon"></div>`;
+	if (BROKEN_ICON_DATA_URL) {
+		return `<div class="set-combo"><img src="${BROKEN_ICON_DATA_URL}" class="set-icon"></div>`;
 	}
 	// Fallback if setbroken.png doesn't exist
 	return `<div class="set-combo broken-icon">?</div>`;
@@ -1244,18 +1257,12 @@ function generateSetHTML(sets) {
 	for (const [setCode, count] of Object.entries(fullSets)) {
 		if (totalIcons >= maxIcons) break;
 
-		const assetPath = SET_ASSETS[setCode];
+		const dataUrl = SET_ICON_DATA_URLS[setCode];
 		const setName = SET_NAMES[setCode] || "Unknown";
 		const isTwoPiece = TWO_PIECE_SETS.has(setCode);
 		const isFourPiece = FOUR_PIECE_SETS.has(setCode);
 
-		if (assetPath && fs.existsSync(assetPath)) {
-			// Convert image to base64 data URL
-			const imageBuffer = fs.readFileSync(assetPath);
-			const imageBase64 = imageBuffer.toString('base64');
-			const imageMimeType = 'image/png';
-			const dataUrl = `data:${imageMimeType};base64,${imageBase64}`;
-
+		if (dataUrl) {
 			// Calculate how many icons to show for this set and gear pieces used
 			let iconsToShow = 0;
 			let piecesUsed = 0;
@@ -1412,27 +1419,18 @@ async function analyzeHeroData(heroName, retryCount = 0) {
 	}
 }
 
+// Long names step down in size so they fit beside the watermark on one line
+function heroNameFontSize(heroName) {
+	if (heroName.length <= 16) return 28;
+	if (heroName.length <= 22) return 24;
+	return 20;
+}
+
 async function generateHTML(data) {
 	const heroImageUrl = getHeroImageUrl(data.heroName, heroData);
 
-	// Convert stat icons to base64 data URLs
-	const statIconDataUrls = {};
-	for (const [statKey, iconPath] of Object.entries(STAT_ICONS)) {
-		if (fs.existsSync(iconPath)) {
-			const imageBuffer = fs.readFileSync(iconPath);
-			const imageBase64 = imageBuffer.toString('base64');
-			statIconDataUrls[statKey] = `data:image/png;base64,${imageBase64}`;
-		}
-	}
-
-	// Convert Briar Bot watermark to base64
-	const watermarkPath = path.join(__dirname, '..', 'assets', 'shared', 'briar-bot.png');
-	let watermarkDataUrl = '';
-	if (fs.existsSync(watermarkPath)) {
-		const watermarkBuffer = fs.readFileSync(watermarkPath);
-		const watermarkBase64 = watermarkBuffer.toString('base64');
-		watermarkDataUrl = `data:image/png;base64,${watermarkBase64}`;
-	}
+	const statIconDataUrls = STAT_ICON_DATA_URLS;
+	const watermarkDataUrl = WATERMARK_DATA_URL;
 
 	return `
 <!DOCTYPE html>
@@ -1517,6 +1515,7 @@ async function generateHTML(data) {
 			gap: 20px;
 			margin-bottom: 30px;
 			padding-bottom: 20px;
+			padding-right: 125px; /* keep the name clear of the Briar Bot watermark */
 			border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 			position: relative;
 		}
@@ -1536,6 +1535,8 @@ async function generateHTML(data) {
         
 		.hero-info {
 			text-align: left;
+			min-width: 0;
+			flex: 1;
 		}
         
 		.hero-name {
@@ -1549,6 +1550,8 @@ async function generateHTML(data) {
 				0 2px 8px rgba(0, 0, 0, 0.5);
 			margin-bottom: 8px;
 			letter-spacing: 0.5px;
+			line-height: 1.15;
+			overflow-wrap: break-word;
 		}
         
 		.build-count {
@@ -1767,7 +1770,7 @@ async function generateHTML(data) {
 	<div class="header">
 		${heroImageUrl ? `<img src="${heroImageUrl}" class="hero-icon" alt="${data.heroName}">` : ''}
 		<div class="hero-info">
-			<div class="hero-name">${data.heroName}</div>
+			<div class="hero-name" style="font-size: ${heroNameFontSize(data.heroName)}px">${data.heroName}</div>
 			<div class="build-count">${data.totalBuilds.toLocaleString()}+ builds analyzed</div>
 		</div>
 	</div>
@@ -1845,70 +1848,127 @@ async function generateHTML(data) {
 </html>`;
 }
 
-async function generateReportImage(data) {
-	const html = await generateHTML(data);
+const puppeteer = require('puppeteer-core');
 
-	const puppeteer = require('puppeteer-core');
-	let browser;
-	let page;
+const BROWSER_IDLE_TIMEOUT = 10 * 60 * 1000; // Close Chromium after 10 idle minutes
+const RENDER_ATTEMPTS = 2;
+const IMAGE_LOAD_TIMEOUT = 8000;
+
+let browserPromise = null;
+let browserIdleTimer = null;
+
+function launchBrowser() {
+	const config = {
+		headless: true,
+		timeout: 60000,
+		protocolTimeout: 60000,
+		args: [
+			'--no-sandbox',
+			'--disable-setuid-sandbox',
+			'--disable-dev-shm-usage',
+			'--disable-gpu',
+			'--disable-web-security',
+			'--disable-features=VizDisplayCompositor',
+			'--disable-background-timer-throttling',
+			'--disable-renderer-backgrounding',
+			'--disable-backgrounding-occluded-windows',
+			'--disable-ipc-flooding-protection',
+			'--memory-pressure-off',
+			'--no-first-run',
+			'--no-default-browser-check',
+			'--mute-audio',
+			'--disable-extensions',
+			'--disable-default-apps',
+			'--disable-sync',
+			'--disable-translate',
+			'--hide-scrollbars',
+			'--disable-plugins',
+			'--disable-notifications'
+		]
+	};
+
+	if (process.env.NODE_ENV === 'production') {
+		config.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+	}
+
+	const launch = puppeteer.launch(config).then((browser) => {
+		browser.on('disconnected', () => {
+			if (browserPromise === launch) {
+				browserPromise = null;
+			}
+		});
+		return browser;
+	});
+
+	// A failed launch must not poison later renders
+	launch.catch(() => {
+		if (browserPromise === launch) {
+			browserPromise = null;
+		}
+	});
+
+	browserPromise = launch;
+	return launch;
+}
+
+async function getBrowser() {
+	clearTimeout(browserIdleTimer);
+
+	if (browserPromise) {
+		const browser = await browserPromise.catch(() => null);
+		if (browser && browser.connected) {
+			return browser;
+		}
+		browserPromise = null;
+	}
+
+	return launchBrowser();
+}
+
+async function closeBrowser() {
+	clearTimeout(browserIdleTimer);
+	const pending = browserPromise;
+	browserPromise = null;
+	if (!pending) return;
 
 	try {
-		const isProduction = process.env.NODE_ENV === 'production';
+		const browser = await pending;
+		await browser.close();
+	} catch (e) { /* ignore */ }
+}
 
-		const config = {
-			headless: true,
-			timeout: 60000,
-			protocolTimeout: 60000,
-			args: [
-				'--no-sandbox',
-				'--disable-setuid-sandbox',
-				'--disable-dev-shm-usage',
-				'--disable-gpu',
-				'--disable-web-security',
-				'--disable-features=VizDisplayCompositor',
-				'--disable-background-timer-throttling',
-				'--disable-renderer-backgrounding',
-				'--disable-backgrounding-occluded-windows',
-				'--disable-ipc-flooding-protection',
-				'--memory-pressure-off',
-				'--no-first-run',
-				'--no-default-browser-check',
-				'--mute-audio',
-				'--disable-extensions',
-				'--disable-default-apps',
-				'--disable-sync',
-				'--disable-translate',
-				'--hide-scrollbars',
-				'--disable-plugins',
-				'--disable-notifications'
-			]
-		};
+function scheduleBrowserIdleClose() {
+	clearTimeout(browserIdleTimer);
+	browserIdleTimer = setTimeout(closeBrowser, BROWSER_IDLE_TIMEOUT);
+	browserIdleTimer.unref?.();
+}
 
-		if (isProduction) {
-			config.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
-		}
+async function renderHtml(html) {
+	const browser = await getBrowser();
+	const page = await browser.newPage();
 
-		browser = await puppeteer.launch(config);
-
-		page = await browser.newPage();
-
-		// Optimize page settings for VM performance
-		await page.setCacheEnabled(false);
-		await page.setOfflineMode(false);
-
-		await page.setContent(html, {
-			waitUntil: 'domcontentloaded',
-			timeout: 30000
-		});
-
+	try {
 		await page.setViewport({
 			width: 600,
 			height: 975,
 			deviceScaleFactor: 1.5
 		});
 
-		// Reduced wait time for faster response
-		await new Promise(resolve => setTimeout(resolve, 1000));
+		await page.setContent(html, {
+			waitUntil: 'domcontentloaded',
+			timeout: 30000
+		});
+
+		// Wait for hero and artifact icons, but never let one slow host hold the render
+		await page.evaluate((timeout) => Promise.race([
+			Promise.all(Array.from(document.images, (img) => (
+				img.complete ? null : new Promise((resolve) => {
+					img.addEventListener('load', resolve, { once: true });
+					img.addEventListener('error', resolve, { once: true });
+				})
+			))),
+			new Promise((resolve) => setTimeout(resolve, timeout))
+		]), IMAGE_LOAD_TIMEOUT);
 
 		const screenshot = await page.screenshot({
 			type: 'png',
@@ -1917,18 +1977,30 @@ async function generateReportImage(data) {
 			clip: { x: 0, y: 0, width: 600, height: 975 }
 		});
 
-		return screenshot;
-
-	} catch (error) {
-		console.error('Puppeteer error:', error.message);
-		throw error;
+		return Buffer.from(screenshot);
 	} finally {
-		try {
-			if (page) await page.close();
-		} catch (e) { /* ignore */ }
-		try {
-			if (browser) await browser.close();
-		} catch (e) { /* ignore */ }
+		await page.close().catch(() => {});
+	}
+}
+
+async function generateReportImage(data) {
+	const html = await generateHTML(data);
+	let lastError;
+
+	try {
+		for (let attempt = 1; attempt <= RENDER_ATTEMPTS; attempt++) {
+			try {
+				return await renderHtml(html);
+			} catch (error) {
+				lastError = error;
+				console.error(`Puppeteer error (attempt ${attempt}/${RENDER_ATTEMPTS}):`, error.message);
+				// Start the next attempt from a fresh Chromium
+				await closeBrowser();
+			}
+		}
+		throw lastError;
+	} finally {
+		scheduleBrowserIdleClose();
 	}
 }
 
@@ -2085,6 +2157,17 @@ if (require.main === module) {
 			const characterName = searchResult.character;
 			const confidence = (searchResult.confidence * 100).toFixed(1);
 
+			// Cached images skip the queue so they never wait behind a fresh render
+			const cachedImage = cacheManager.getCachedHeroImage(characterName);
+			if (cachedImage) {
+				try {
+					await message.reply(buildImagePayload(characterName, cachedImage));
+					return;
+				} catch (error) {
+					console.warn(`Cached reply failed for ${characterName}, queueing instead:`, error.message);
+				}
+			}
+
 			// Add to queue
 			const queueResult = addToQueue({
 				message,
@@ -2115,11 +2198,16 @@ if (require.main === module) {
 
 	client.login(BOT_TOKEN);
 
-	process.on('SIGINT', () => {
+	const shutdown = async () => {
 		console.log('Shutting down bot...');
+		cacheManager.flushMetadata();
+		await closeBrowser();
 		client.destroy();
 		process.exit(0);
-	});
+	};
+
+	process.on('SIGINT', shutdown);
+	process.on('SIGTERM', shutdown);
 }
 
 // Export functions for testing
@@ -2128,6 +2216,7 @@ module.exports = {
 	analyzeHeroData,
 	generateReportImage,
 	generateHTML,
+	closeBrowser,
 	checkRateLimit,
 	heroData,
 	artifactData,

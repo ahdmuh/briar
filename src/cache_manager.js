@@ -9,6 +9,14 @@ class CacheManager {
         this.metadataFile = path.join(this.cacheDir, 'metadata.json');
         this.defaultTTL = options.ttl || 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
         this.maxCacheSize = options.maxCacheSize || 500; // Maximum number of cached images
+        this.memoryCacheSize = options.memoryCacheSize || 40; // Hot images kept in memory
+        // Bump when the report layout changes; older images re-render but remain a stale fallback
+        this.renderVersion = options.renderVersion || 1;
+        this.metadataSaveDelay = options.metadataSaveDelay ?? 2000;
+
+        // heroName -> Buffer, insertion order doubles as LRU order
+        this.memory = new Map();
+        this.metadataSaveTimer = null;
         
         this.metadata = {
             version: '2.0',
@@ -83,7 +91,7 @@ class CacheManager {
         const filePath = path.join(this.heroImagesDir, `${filename}.png`);
         const heroMetadata = this.metadata.heroes[heroName];
 
-        if (!heroMetadata || !fs.existsSync(filePath)) {
+        if (!heroMetadata || (!this.memory.has(heroName) && !fs.existsSync(filePath))) {
             return false;
         }
 
@@ -98,7 +106,7 @@ class CacheManager {
             return false;
         }
 
-        return true;
+        return (heroMetadata.renderVersion || 1) === this.renderVersion;
     }
 
     /**
@@ -118,8 +126,11 @@ class CacheManager {
             // Check cache size limits and perform LRU eviction if needed
             await this.enforceMaxCacheSize();
 
-            // Write image file
-            fs.writeFileSync(filePath, imageBuffer);
+            // Write to a temp file then rename so a crash never leaves a truncated PNG
+            const tempPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+            await fs.promises.writeFile(tempPath, imageBuffer);
+            await fs.promises.rename(tempPath, filePath);
+            this.rememberImage(heroName, imageBuffer);
 
             // Update metadata
             this.metadata.heroes[heroName] = {
@@ -129,6 +140,7 @@ class CacheManager {
                 fileExists: true,
                 fileSizeBytes: imageBuffer.length,
                 totalBuilds: analysisData.totalBuilds || 0,
+                renderVersion: this.renderVersion,
                 validData: true,
                 accessCount: 0,
                 lastAccessed: timestamp
@@ -173,9 +185,13 @@ class CacheManager {
         }
 
         try {
-            const filename = this.generateFilename(heroName);
-            const filePath = path.join(this.heroImagesDir, `${filename}.png`);
-            const imageBuffer = fs.readFileSync(filePath);
+            let imageBuffer = this.memory.get(heroName);
+            if (!imageBuffer) {
+                const filename = this.generateFilename(heroName);
+                const filePath = path.join(this.heroImagesDir, `${filename}.png`);
+                imageBuffer = fs.readFileSync(filePath);
+            }
+            this.rememberImage(heroName, imageBuffer);
 
             // Update access metadata
             if (this.metadata.heroes[heroName]) {
@@ -206,7 +222,7 @@ class CacheManager {
                 return null;
             }
 
-            const imageBuffer = fs.readFileSync(filePath);
+            const imageBuffer = this.memory.get(heroName) || fs.readFileSync(filePath);
             const lastUpdated = new Date(heroMetadata.lastUpdated);
             const now = new Date();
             const age = now - lastUpdated;
@@ -237,6 +253,7 @@ class CacheManager {
     removeCachedHero(heroName) {
         try {
             const heroMetadata = this.metadata.heroes[heroName];
+            this.memory.delete(heroName);
             if (heroMetadata) {
                 const filePath = path.join(this.heroImagesDir, `${heroMetadata.filename}.png`);
                 
@@ -409,15 +426,65 @@ class CacheManager {
     }
 
     /**
-     * Save metadata to disk
+     * Keep a hero image in the in-memory LRU
+     * @param {string} heroName
+     * @param {Buffer} imageBuffer
+     */
+    rememberImage(heroName, imageBuffer) {
+        this.memory.delete(heroName);
+        this.memory.set(heroName, imageBuffer);
+        while (this.memory.size > this.memoryCacheSize) {
+            this.memory.delete(this.memory.keys().next().value);
+        }
+    }
+
+    /**
+     * Schedule a metadata save; bursts of reads and writes collapse into one disk write
      */
     saveMetadata() {
+        if (this.metadataSaveDelay === 0) {
+            this.flushMetadata();
+            return;
+        }
+        if (this.metadataSaveTimer) return;
+
+        this.metadataSaveTimer = setTimeout(() => {
+            this.metadataSaveTimer = null;
+            this.writeMetadataAsync();
+        }, this.metadataSaveDelay);
+        this.metadataSaveTimer.unref?.();
+    }
+
+    serializeMetadata() {
+        const stats = this.getCacheStats();
+        this.metadata.cacheSize = stats.totalImages;
+        this.metadata.totalDiskUsage = parseFloat(stats.totalSizeMB);
+        this.metadata.failedHeroes = (this.metadata.failedHeroes || []).slice(-50);
+        return JSON.stringify(this.metadata, null, 2);
+    }
+
+    async writeMetadataAsync() {
         try {
-            const stats = this.getCacheStats();
-            this.metadata.cacheSize = stats.totalImages;
-            this.metadata.totalDiskUsage = parseFloat(stats.totalSizeMB);
-            
-            fs.writeFileSync(this.metadataFile, JSON.stringify(this.metadata, null, 2));
+            const tempPath = `${this.metadataFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
+            await fs.promises.writeFile(tempPath, this.serializeMetadata());
+            await fs.promises.rename(tempPath, this.metadataFile);
+        } catch (error) {
+            console.error('Failed to save metadata:', error);
+        }
+    }
+
+    /**
+     * Write metadata to disk immediately (startup repairs and shutdown)
+     */
+    flushMetadata() {
+        if (this.metadataSaveTimer) {
+            clearTimeout(this.metadataSaveTimer);
+            this.metadataSaveTimer = null;
+        }
+        try {
+            const tempPath = `${this.metadataFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
+            fs.writeFileSync(tempPath, this.serializeMetadata());
+            fs.renameSync(tempPath, this.metadataFile);
         } catch (error) {
             console.error('Failed to save metadata:', error);
         }
@@ -497,6 +564,8 @@ class CacheManager {
      */
     resetCache() {
         try {
+            this.memory.clear();
+
             // Remove all hero images
             if (fs.existsSync(this.heroImagesDir)) {
                 const files = fs.readdirSync(this.heroImagesDir);
