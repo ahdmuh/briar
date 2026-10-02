@@ -28,7 +28,8 @@ permissions:
 
 jobs:
   publish:
-    runs-on: [self-hosted, furnace]
+    # Pinned to arcesus: giratus's network link tops out near 9 Mbps, which stalls image builds and pushes
+    runs-on: [self-hosted, furnace, arcesus]
 
     steps:
       - name: Check out repository
