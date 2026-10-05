@@ -1,4 +1,4 @@
-name: Sync Characters
+name: Add Characters
 
 on:
   workflow_dispatch:
