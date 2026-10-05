@@ -31,10 +31,19 @@ jobs:
       target_branch: ${{ inputs.target_branch }}
 
     steps:
+      # Lisbeth, Furnace's GitHub App, pushes the data commit: main only accepts direct pushes from her.
+      - name: Lisbeth's token
+        id: lisbeth
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.LISBETH_APP_ID }}
+          private-key: ${{ secrets.LISBETH_APP_PRIVATE_KEY }}
+
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target_branch }}
+          token: ${{ steps.lisbeth.outputs.token }}
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -66,12 +75,12 @@ jobs:
             exit 0
           fi
 
-          # Authored by Lisbeth, Furnace's GitHub App. Pushing with the job's own
-          # token keeps this from starting the image workflow on top of publish.
+          # Authored and pushed by Lisbeth. [skip ci] keeps the push from starting the
+          # Deploy workflow on top of this run's own publish job.
           git config user.name "lisbeth-git[bot]"
           git config user.email "337864716+lisbeth-git[bot]@users.noreply.github.com"
           git add data/character-names.json data/character-aliases.json
-          git commit -m "chore(data): update ${CHARACTER_NAME//;/,}"
+          git commit -m "chore(data): update ${CHARACTER_NAME//;/,} [skip ci]"
           git push origin "HEAD:${TARGET_BRANCH}"
           echo "changed=true" >> "$GITHUB_OUTPUT"
           echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
