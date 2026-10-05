@@ -60,4 +60,4 @@ Guild war announcements are scheduled for 00:00 UTC:
 
 ## Image publication
 
-The **Deploy** workflow builds the Docker image and publishes `latest` and SHA-tagged images to GitHub Container Registry. The **Sync Characters** workflow can add or update character names and aliases, then reuses image publication rather than duplicating those steps.
+The **Deploy** workflow builds the Docker image and publishes `latest` and SHA-tagged images to GitHub Container Registry. The **Add Characters** workflow can add or update character names and aliases, then reuses image publication rather than duplicating those steps.
