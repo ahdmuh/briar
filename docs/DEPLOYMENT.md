@@ -26,16 +26,6 @@ docker compose -f .docker/compose.yml pull
 docker compose -f .docker/compose.yml up -d --remove-orphans
 ```
 
-## Optional automatic updater
-
-On a server that already uses the Compose layout, install the optional updater:
-
-```bash
-bash scripts/install-updater.sh 5
-```
-
-The `5` is the update check interval in minutes. The updater runs `scripts/update-briar.sh`, pulls the configured image, and recreates the bot when a new image is available.
-
 ## Configuration
 
 Copy `.env.template` to `.env` and set the variables you need. Full defaults also appear in `.env.template`.
