@@ -10,14 +10,12 @@ Briar Bot is a focused Epic Seven Discord utility. Prefer changes that improve r
 
 1. Read [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md) for local setup and project layout.
 2. Keep the change focused on one problem when practical.
-3. From the repository root, install dependencies and run the checks that match your change:
+3. From the repository root, install dependencies:
 
 ```bash
 bun install --frozen-lockfile
-bun run test
 ```
 
-When you touch character lookup data or search, also run `bun run test:character-data`.
 4. Do not commit secrets, `.env` files, `cache/`, logs, or `node_modules/`.
 
 ## Pull requests
@@ -37,7 +35,6 @@ What you ran (commands, clients, platforms) and what you verified by hand. Link 
 List concrete, checkable outcomes. Example:
 
 - [ ] Behavior X works for Y
-- [ ] Related tests pass
 - [ ] No secrets or local data committed
 
 Screenshots or short recordings are welcome for user-facing UI changes.
