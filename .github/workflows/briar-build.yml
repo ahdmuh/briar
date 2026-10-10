@@ -1,4 +1,4 @@
-name: Deploy
+name: Build
 
 on:
   push:
@@ -13,14 +13,8 @@ on:
       - "bun.lock"
       - ".docker/**"
       - ".docker/.dockerignore"
-      - ".github/workflows/briar-deploy.yml"
+      - ".github/workflows/briar-build.yml"
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      ref:
-        description: Git revision to build
-        required: false
-        type: string
 
 permissions:
   contents: read
@@ -34,8 +28,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.sha }}
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -44,9 +36,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Validate character data
-        run: bun run test:character-data
 
       - name: Set image name
         id: image
